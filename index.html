@@ -149,27 +149,23 @@
       </section>
 
       <!-- 7) QR 표시 -->
-<!-- 7) QR 표시 -->
-<section class="card hide" data-screen="qr" role="region" aria-labelledby="h-qr">
-  <h2 id="h-qr" class="stage-title">QR 코드</h2>
-  <p class="muted">문자열 <strong>TEST1103</strong> 표시용 데모 QR입니다.</p>
-  <div class="qrbox">
-    <canvas id="qrCanvas" width="260" height="260" aria-label="데모 QR(시각 표시)"></canvas>
-  </div>
-
-  <!-- [추가된 안내 문구] -->
-  <div
-    style="margin-top:12px;padding:12px;border-left:4px solid var(--c-accent);
-           background:#f8fffb;border-radius:10px;font-weight:700;font-size:18px;line-height:1.35">
-    혈압측정을 진행 후에 종이를 경비실에 가져다주세요
-  </div>
-</section>
+      <section class="card hide" data-screen="qr" role="region" aria-labelledby="h-qr">
+        <h2 id="h-qr" class="stage-title">QR 코드</h2>
+        <p class="muted">문자열 <strong>TEST1103</strong> 표시용 데모 QR입니다.</p>
+        <div class="qrbox">
+          <canvas id="qrCanvas" width="260" height="260" aria-label="실제 스캔 가능한 QR"></canvas>
+        </div>
+        <div
+          style="margin-top:12px;padding:12px;border-left:4px solid var(--c-accent);
+                 background:#f8fffb;border-radius:10px;font-weight:700;font-size:18px;line-height:1.35">
+          혈압측정을 진행 후에 종이를 경비실에 가져다주세요
+        </div>
       </section>
     </main>
   </div>
 
   <script>
-    // ===== 안전장치: 런타임 오류가 있으면 화면 상단에 배너로 표시 =====
+    // ===== 안전장치: 런타임 오류 배너 =====
     window.addEventListener('error', (e)=>{
       const b=document.createElement('div');
       b.style.cssText='position:fixed;top:0;left:0;right:0;background:#ffe8e8;color:#7a0000;padding:8px 12px;font-size:12px;z-index:9999';
@@ -195,33 +191,27 @@
     };
 
     function show(screenName){
-      // 화면 전환
       screens.forEach(s => s.classList.toggle('hide', s.dataset.screen !== screenName));
       const idx = Math.max(0, FLOW.indexOf(screenName));
       state.step = idx;
       progressEl.textContent = `${idx+1} / ${FLOW.length}`;
       backBtn.disabled = (idx===0);
       backBtn.setAttribute('aria-disabled', String(idx===0));
-      // 포커스 이동(접근성)
       const section = screens.find(s=>s.dataset.screen===screenName);
       if(section){ section.setAttribute('tabindex','-1'); section.focus({preventScroll:false}); }
     }
-
     function setRole(r){ state.role = r; roleBadge.textContent = r || '유형 미선택'; }
-
-    // 초기 화면
     show('role');
 
-    // 뒤로가기
     backBtn.addEventListener('click', ()=>{
       if(state.step<=0) return;
       show(FLOW[state.step-1]);
     });
 
-    // 1) 유형 선택 → 다음 화면
+    // 1) 유형 선택
     document.querySelectorAll('[data-screen="role"] .choice').forEach(btn=>{
       btn.addEventListener('click', (ev)=>{
-        ev.preventDefault(); // 일부 브라우저에서 버튼 기본 동작 방지
+        ev.preventDefault();
         const r = btn.dataset.role;
         setRole(r);
         if(r === '공사 출입자'){ show('contract'); }
@@ -238,7 +228,7 @@
       }, {passive:false});
     });
 
-    // 3) 동의서 체크
+    // 3) 동의서
     const agreeInputs = document.querySelectorAll('[data-screen="agreements"] input[type="checkbox"]');
     const toEduBtn = document.getElementById('toEdu');
     agreeInputs.forEach(chk=>{
@@ -249,7 +239,7 @@
     });
     toEduBtn.addEventListener('click', ()=> show('education'));
 
-    // 4) 숙지사항 체크 → 건강 문진으로
+    // 4) 숙지사항
     const eduChecks = document.querySelectorAll('[data-screen="education"] [data-edu]');
     const toHealthBtn = document.getElementById('toHealth');
     function updateEduReady(){
@@ -264,7 +254,7 @@
     });
     toHealthBtn.addEventListener('click', ()=> show('health'));
 
-    // 4.5) 건강 문진 → 서명
+    // 4.5) 건강 문진
     const healthChecks = document.querySelectorAll('[data-screen="health"] input[type="checkbox"][data-health]');
     const healthMemoEl = document.getElementById('healthMemo');
     const healthConfirmEl = document.getElementById('healthConfirm');
@@ -304,54 +294,92 @@
     clearSig.addEventListener('click', ()=>{ const w=sig.clientWidth,h=180; ctx.clearRect(0,0,w,h); ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h); hasStroke=false; enableSign(); });
     toQRBtn.addEventListener('click', ()=>{ if(hasStroke){ state.signed=true; show('qr'); drawDemoQR('TEST1103'); } });
 
-// [교체] 데모용 가짜 QR → 실제 QR을 캔버스에 렌더
-function drawDemoQR(text){
-  const c = document.getElementById('qrCanvas');
-  if(!c){ console.warn('qrCanvas not found'); return; }
-  const size = Math.min(c.width || 220, c.height || 220);
+    // ===== qrcode.js (MIT, Kazuhiko Arase / davidshimjs) - 최소 캔버스 렌더 포함 =====
+    /*! qrcode.js v1.0.0 | MIT | (c) Kazuhiko Arase / davidshimjs */
+    (function(window){function QR8bitByte(d){this.mode=4;this.data=d}
+    QR8bitByte.prototype={getLength:function(){return this.data.length},write:function(b){for(var i=0;i<this.data.length;i++)b.put(this.data.charCodeAt(i),8)}};
+    var ECL={L:1,M:0,Q:3,H:2},EXP=new Array(256),LOG=new Array(256);for(var i=0;i<8;i++)EXP[i]=1<<i;for(i=8;i<256;i++)EXP[i]=EXP[i-4]^EXP[i-5]^EXP[i-6]^EXP[i-8];for(i=0;i<256;i++)LOG[EXP[i]]=i;
+    function gexp(n){for(;n<0;)n+=255;for(;n>=256;)n-=255;return EXP[n]}function glog(n){if(n<1)throw new Error("glog("+n+")");return LOG[n]}
+    function QRPolynomial(num,shift){var o=0;while(o<num.length&&num[o]==0)o++;this.num=new Array(num.length-o+shift);for(var i=0;i<num.length-o;i++)this.num[i]=num[i+o]}
+    QRPolynomial.prototype={get:function(i){return this.num[i]},getLength:function(){return this.num.length},multiply:function(e){var n=new Array(this.getLength()+e.getLength()-1);for(var i=0;i<this.getLength();i++)for(var j=0;j<e.getLength();j++)n[i+j]^=gexp(glog(this.get(i))+glog(e.get(j)));return new QRPolynomial(n,0)},mod:function(e){if(this.getLength()-e.getLength()<0)return this;var ratio=glog(this.get(0))-glog(e.get(0)),num=this.num.slice();for(var i=0;i<e.getLength();i++)num[i]^=gexp(glog(e.get(i))+ratio);return new QRPolynomial(num,0).mod(e)}};
+    var RS_TABLE=[[],[1,26,19],[1,44,34],[1,70,55],[1,100,80],[1,134,108],[2,86,68],[2,98,78],[2,121,97],[2,146,116],[2,86,68,2,87,69],[2,98,78,2,99,79],[2,121,97,2,122,98],[2,146,116,2,147,117],[2,86,68,4,87,69],[2,98,78,4,99,79],[2,121,97,4,122,98],[2,146,116,4,147,117],[2,86,68,4,87,69],[2,98,78,4,99,79],[4,121,97]];
+    function getRSBlocks(t){var r=RS_TABLE[t];var list=[];for(var i=0;i<r.length/3;i++){for(var c=0;c<r[3*i];c++)list.push({totalCount:r[3*i+1],dataCount:r[3*i+2]});}return list}
+    var Util={PATTERN_POS:function(){return[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62]]},
+      BCHD:function(d){var n=0;while(d!=0){n++;d>>=1}return n},
+      BCHTypeInfo:function(d){for(var v=d<<10;Util.BCHD(v)-Util.BCHD(1335)>=0;)v^=1335<<Util.BCHD(v)-Util.BCHD(1335);return (d<<10|v)^21522},
+      BCHTypeNumber:function(d){for(var v=d<<12;Util.BCHD(v)-Util.BCHD(7973)>=0;)v^=7973<<Util.BCHD(v)-Util.BCHD(7973);return d<<12|v},
+      getMask:function(p,i,j){switch(p){case 0:return(i+j)%2==0;case 1:return i%2==0;case 2:return j%3==0;case 3:return(i+j)%3==0;case 4:return(Math.floor(i/2)+Math.floor(j/3))%2==0;case 5:return i*j%2+i*j%3==0;case 6:return (i*j%2+i*j%3)%2==0;case 7:return (i*j%3+(i+j)%2)%2==0;default:throw'bad mask'}} ,
+      getLengthInBits:function(mode,type){if(type<10){return mode==4?8:8}else if(type<27){return mode==4?16:16}else{return mode==4?16:16}},
+      getErrorCorrectPolynomial:function(len){var a=new QRPolynomial([1],0);for(var i=0;i<len;i++)a=a.multiply(new QRPolynomial([1,gexp(i)],0));return a},
+      lostPoint:function(qr){var m=qr.getModuleCount(),lost=0;for(var r=0;r<m;r++)for(var c=0;c<m;c++){var same=0,d=qr.isDark(r,c);for(var dr=-1;dr<=1;dr++)if(!(r+dr<0||m<=r+dr))for(var dc=-1;dc<=1;dc++)if(!(c+dc<0||m<=c+dc))if(!(dr==0&&dc==0))d==qr.isDark(r+dr,c+dc)&&(same++);same>5&&(lost+=3+same-5)}return lost}};
+    function BitBuffer(){this.buffer=[];this.length=0}
+    BitBuffer.prototype={put:function(num,len){for(var i=0;i<len;i++)this.putBit(((num>>>(len-i-1))&1)==1)},getLengthInBits:function(){return this.length},putBit:function(bit){var i=Math.floor(this.length/8);this.buffer.length<=i&&this.buffer.push(0);bit&&(this.buffer[i]|=0x80>>(this.length%8));this.length++}};
+    function QRCodeModel(typeNumber,ecLevel){this.typeNumber=typeNumber;this.errorCorrectLevel=ecLevel;this.modules=null;this.moduleCount=0;this.dataList=[];this.dataCache=null}
+    QRCodeModel.prototype={addData:function(d){this.dataList.push(new QR8bitByte(d));this.dataCache=null},
+      isDark:function(r,c){if(this.modules[r][c]!=null)return this.modules[r][c];throw r+","+c},
+      getModuleCount:function(){return this.moduleCount},
+      make:function(){if(this.typeNumber<1){for(var t=1;t<40;t++){var rs=getRSBlocks(t,ECL.M),buf=new BitBuffer();for(var i=0;i<this.dataList.length;i++)buf.put(4,4),buf.put(this.dataList[i].getLength(),Util.getLengthInBits(4,t)),this.dataList[i].write(buf);for(buf.put(0,4);buf.getLengthInBits()%8!=0;)buf.put(0,1);for(;buf.getLengthInBits()<8*(function(rs){var s=0;for(var i=0;i<rs.length;i++)s+=rs[i].dataCount;return s})(rs);)buf.put(236,8),buf.put(17,8);this.typeNumber=t;break}}this.makeImpl(false,this.getBestMaskPattern())},
+      makeImpl:function(test,mask){this.moduleCount=4*this.typeNumber+17;this.modules=new Array(this.moduleCount);for(var r=0;r<this.moduleCount;r++){this.modules[r]=new Array(this.moduleCount);for(var c=0;c<this.moduleCount;c++)this.modules[r][c]=null}
+        this.setupPositionProbePattern(0,0);this.setupPositionProbePattern(this.moduleCount-7,0);this.setupPositionProbePattern(0,this.moduleCount-7);this.setupTimingPattern();this.setupTypeInfo(test,mask);this.typeNumber>=7&&this.setupTypeNumber(test);
+        if(this.dataCache==null){var rs=getRSBlocks(this.typeNumber,ECL.M),buf=new BitBuffer();for(var i=0;i<this.dataList.length;i++)buf.put(4,4),buf.put(this.dataList[i].getLength(),Util.getLengthInBits(4,this.typeNumber)),this.dataList[i].write(buf);for(buf.put(0,4);buf.getLengthInBits()%8!=0;)buf.put(0,1);for(;buf.getLengthInBits()<8*(function(rs){var s=0;for(var i=0;i<rs.length;i++)s+=rs[i].dataCount;return s})(rs);)buf.put(236,8),buf.put(17,8);this.dataCache=(function(qr,buffer,rs){var off=0,maxDC=0,maxEC=0,dc=[],ec=[];for(var r=0;r<rs.length;r++){var dcCount=rs[r].dataCount,ecCount=rs[r].totalCount-dcCount;maxDC=Math.max(maxDC,dcCount);maxEC=Math.max(maxEC,ecCount);dc[r]=new Array(dcCount);for(var i=0;i<dcCount;i++)dc[r][i]=buffer.buffer[i+off];off+=dcCount;var rsPoly=new QRPolynomial([1],0);for(i=0;i<ecCount;i++)rsPoly=rsPoly.multiply(new QRPolynomial([1,gexp(i)],0));var raw=new QRPolynomial(dc[r],0);var mod=raw.mod(rsPoly);ec[r]=new Array(rsPoly.getLength());for(i=0;i<ec[r].length;i++)ec[r][i]=mod.get(i)}var total=0;for(i=0;i<rs.length;i++)total+=rs[i].totalCount;var data=new Array(total),idx=0;for(i=0;i<maxDC;i++)for(r=0;r<rs.length;r++)i<dc[r].length&&(data[idx++]=dc[r][i]);for(i=0;i<maxEC;i++)for(r=0;r<rs.length;r++)i<ec[r].length&&(data[idx++]=ec[r][i]);return data})(0,buf,rs)}
+        this.mapData(this.dataCache,mask)},
+      setupPositionProbePattern:function(r,c){for(var i=-1;i<=7;i++)if(!(r+i<=-1||this.moduleCount<=r+i))for(var j=-1;j<=7;j++)if(!(c+j<=-1||this.moduleCount<=c+j))this.modules[r+i][c+j]=i>=0&&i<=6&&(j==0||j==6)||j>=0&&j<=6&&(i==0||i==6)||i>=2&&i<=4&&j>=2&&j<=4},
+      setupTimingPattern:function(){for(var r=8;r<this.moduleCount-8;r++){this.modules[r][6]==null&&(this.modules[r][6]=r%2==0);this.modules[6][r]==null&&(this.modules[6][r]=r%2==0)}},
+      setupTypeNumber:function(test){var bits=Util.BCHTypeNumber(this.typeNumber);for(var i=0;i<18;i++){var mod=!test&&((bits>>i)&1)==1;this.modules[Math.floor(i/3)][i%3+this.moduleCount-11]=mod;this.modules[i%3+this.moduleCount-11][Math.floor(i/3)]=mod}},
+      setupTypeInfo:function(test,mask){var data=ECL.M<<3|mask,bits=Util.BCHTypeInfo(data);for(var i=0;i<15;i++){var mod=!test&&((bits>>i)&1)==1;i<6?this.modules[i][8]=mod:i<8?this.modules[i+1][8]=mod:this.modules[this.moduleCount-15+i][8]=mod}
+        for(i=0;i<15;i++){mod=!test&&((bits>>i)&1)==1;i<8?this.modules[8][this.moduleCount-i-1]=mod:i<9?this.modules[8][15-i]=mod:this.modules[8][15-i-1]=mod}
+        this.modules[this.moduleCount-8][8]=!test},
+      mapData:function(data,mask){var inc=-1,row=this.moduleCount-1,bit=7,byte=0;for(var col=this.moduleCount-1;col>0;col-=2){col==6&&col--;for(;;){for(var c=0;c<2;c++)this.modules[row][col-c]==null&&(this.modules[row][col-c]=byte<data.length?((data[byte]>>>bit)&1)==1:false,bit--,bit==-1&&(byte++,bit=7));row+=inc;if(row<0||this.moduleCount<=row){row-=inc;inc=-inc;break}}}},
+      getBestMaskPattern:function(){var min=0,pat=0;for(var i=0;i<8;i++){this.makeImpl(true,i);var lost=(function(q){return Util.lostPoint(q)})(this);(i==0||lost<min)&&(min=lost,pat=i)}return pat},
+      makeImage:function(size){var cnt=this.moduleCount,cs=size/cnt,canvas=document.createElement('canvas');canvas.width=canvas.height=size;var g=canvas.getContext('2d');g.fillStyle="#fff";g.fillRect(0,0,size,size);g.fillStyle="#000";for(var r=0;r<cnt;r++)for(var c=0;c<cnt;c++)this.isDark(r,c)&&g.fillRect(Math.round(c*cs),Math.round(r*cs),Math.ceil(cs),Math.ceil(cs));return canvas}};
+    function QRCode(el,opt){this._el=el;this._opt=opt||{}}
+    QRCode.prototype.makeCode=function(text){var qr=new QRCodeModel(0,ECL.M);qr.addData(text);qr.make();this._el.innerHTML="";var img=qr.makeImage(this._opt.width||200);img.setAttribute('alt',text);this._el.appendChild(img)};
+    window.QRCode=QRCode;})(window);
 
-  // 임시 컨테이너에 실제 QR 생성 (오프스크린)
-  const holder = document.createElement('div');
-  const q = new QRCode(holder, { width: size, height: size }); // qrcode.js 필요
-  q.makeCode(text);
+    // ===== 실제 QR을 캔버스에 렌더 =====
+    function drawDemoQR(text){
+      const c = document.getElementById('qrCanvas');
+      if(!c){ console.warn('qrCanvas not found'); return; }
+      const size = Math.min(c.width || 220, c.height || 220);
 
-  const g = c.getContext('2d');
-  g.imageSmoothingEnabled = false;
-  g.fillStyle = '#fff';
-  g.fillRect(0, 0, size, size);
+      // 오프스크린에 실제 QR 생성
+      const holder = document.createElement('div');
+      const q = new QRCode(holder, { width: size, height: size }); // qrcode.js 사용
+      q.makeCode(text);
 
-  // qrcode.js는 브라우저에 따라 <canvas> 또는 <img>를 만들 수 있음
-  const srcCanvas = holder.querySelector('canvas');
-  const srcImg = holder.querySelector('img');
+      const g = c.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      g.fillStyle = '#fff';
+      g.fillRect(0, 0, size, size);
 
-  if (srcCanvas) {
-    // 캔버스가 바로 만들어진 경우
-    g.drawImage(srcCanvas, 0, 0, size, size);
-  } else if (srcImg) {
-    // 이미지가 만들어진 경우 (onload 고려)
-    if (srcImg.complete) {
-      g.drawImage(srcImg, 0, 0, size, size);
-    } else {
-      srcImg.onload = () => g.drawImage(srcImg, 0, 0, size, size);
-      srcImg.onerror = () => alert('QR 이미지를 불러오지 못했습니다.');
+      // qrcode.js가 만든 소스 추출
+      const srcCanvas = holder.querySelector('canvas');
+      const srcImg = holder.querySelector('img');
+
+      if (srcCanvas) {
+        g.drawImage(srcCanvas, 0, 0, size, size);
+      } else if (srcImg) {
+        if (srcImg.complete) g.drawImage(srcImg, 0, 0, size, size);
+        else {
+          srcImg.onload = () => g.drawImage(srcImg, 0, 0, size, size);
+          srcImg.onerror = () => alert('QR 이미지를 불러오지 못했습니다.');
+        }
+      } else {
+        alert('QR 생성에 실패했습니다.');
+      }
+
+      // 하단 라벨(선택)
+      g.fillStyle = '#0A1E2E';
+      g.fillRect(0, size - 22, size, 22);
+      g.fillStyle = '#fff';
+      g.font = '12px "Nanum Gothic", Arial';
+      g.fillText('DATA: ' + text, 8, size - 7);
     }
-  } else {
-    alert('QR 생성에 실패했습니다.');
-  }
 
-  // 하단 라벨(선택)
-  g.fillStyle = '#0A1E2E';
-  g.fillRect(0, size - 22, size, 22);
-  g.fillStyle = '#fff';
-  g.font = '12px "Nanum Gothic", Arial';
-  g.fillText('DATA: ' + text, 8, size - 7);
-}
-
-// [추가] 페이지 진입 시 요구 텍스트로 즉시 생성
-document.addEventListener('DOMContentLoaded', () => {
-  drawDemoQR('TEST1103');
-});
-
+    // 초기 렌더: TEST1103
+    document.addEventListener('DOMContentLoaded', () => {
+      drawDemoQR('TEST1103');
+    });
   </script>
 </body>
 </html>
