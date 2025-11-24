@@ -78,12 +78,16 @@
           <label class="checkline"><input type="checkbox" data-bind="agree2"> <span><strong>보안서약서</strong> (업무상 정보 무단 반출 금지)</span></label>
           <label class="checkline"><input type="checkbox" data-bind="agree3"> <span><strong>안전공사다짐서</strong> (안전수칙 준수/위험 즉시 보고)</span></label>
         </div>
-        <div class="footer">
-          <div class="muted">모두 체크 시 다음 단계로 이동 가능</div>
-          <div style="display:flex;justify-content:flex-end;margin-top:8px">
-            <button type="button" class="btn" id="toEdu" disabled>다음</button>
-          </div>
-        </div>
+<!-- [기존] agreements 섹션 푸터 내부 div 교체 -->
+<div class="footer">
+  <div class="muted">모두 체크 시 다음 단계로 이동 가능</div>
+  <!-- ▼ 이 부분을 다음으로 교체 -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+    <button type="button" class="btn-outline" id="checkAllAgree" aria-label="동의 항목 모두 선택">모두 동의</button>
+    <button type="button" class="btn" id="toEdu" disabled>다음</button>
+  </div>
+</div>
+
       </section>
 
       <!-- 4) 교육 및 숙지사항 -->
@@ -239,6 +243,23 @@
     });
     toEduBtn.addEventListener('click', ()=> show('education'));
 
+// [동의서] 기존 변수 아래에 추가
+const checkAllAgree = document.getElementById('checkAllAgree');
+
+// 모두 동의 버튼 핸들러
+checkAllAgree.addEventListener('click', ()=>{
+  agreeInputs.forEach(chk => {
+    chk.checked = true;
+    // 상태 동기화
+    state.agree[chk.dataset.bind] = true;
+    // 화면의 다른 로직과 일관되게 change 이벤트도 발생시킴
+    chk.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  // 모두 체크되었으므로 다음 버튼 활성화 보장
+  toEduBtn.disabled = false;
+});
+
+    
     // 4) 숙지사항
     const eduChecks = document.querySelectorAll('[data-screen="education"] [data-edu]');
     const toHealthBtn = document.getElementById('toHealth');
@@ -368,12 +389,6 @@
         alert('QR 생성에 실패했습니다.');
       }
 
-      // 하단 라벨(선택)
-      g.fillStyle = '#0A1E2E';
-      g.fillRect(0, size - 22, size, 22);
-      g.fillStyle = '#fff';
-      g.font = '12px "Nanum Gothic", Arial';
-      g.fillText('DATA: ' + text, 8, size - 7);
     }
 
     // 초기 렌더: TEST1103
