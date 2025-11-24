@@ -31,6 +31,7 @@
     :focus-visible{outline:2px solid var(--c-accent);outline-offset:2px}
     .sig-box{border:1px dashed #cbd5e1;border-radius:12px;background:#fff}
     .qrbox{display:flex;align-items:center;justify-content:center;border:1px dashed #cbd5e1;border-radius:12px;min-height:220px;background:#fff}
+    .qrbox img{max-width:100%;height:auto;image-rendering:auto;display:block}
     textarea{width:100%;padding:8px;border:1px solid #e7e7e7;border-radius:10px}
   </style>
 </head>
@@ -78,16 +79,13 @@
           <label class="checkline"><input type="checkbox" data-bind="agree2"> <span><strong>보안서약서</strong> (업무상 정보 무단 반출 금지)</span></label>
           <label class="checkline"><input type="checkbox" data-bind="agree3"> <span><strong>안전공사다짐서</strong> (안전수칙 준수/위험 즉시 보고)</span></label>
         </div>
-<!-- [기존] agreements 섹션 푸터 내부 div 교체 -->
-<div class="footer">
-  <div class="muted">모두 체크 시 다음 단계로 이동 가능</div>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px">
-    <!-- 같은 크기/같은 색상: .btn 사용 -->
-    <button type="button" class="btn" id="checkAllAgree" aria-label="동의 항목 모두 선택">모두 동의</button>
-    <button type="button" class="btn" id="toEdu" disabled>다음</button>
-  </div>
-</div>
-
+        <div class="footer">
+          <div class="muted">모두 체크 시 다음 단계로 이동 가능</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px">
+            <button type="button" class="btn" id="checkAllAgree" aria-label="동의 항목 모두 선택">모두 동의</button>
+            <button type="button" class="btn" id="toEdu" disabled>다음</button>
+          </div>
+        </div>
       </section>
 
       <!-- 4) 교육 및 숙지사항 -->
@@ -102,14 +100,12 @@
           <label class="checkline"><input type="checkbox" data-edu="6"> ⑥ 비상대응 절차 숙지(대피로/집결지 등)</label>
         </div>
         <div class="footer" style="display:flex;justify-content:space-between;align-items:center">
-  <span class="muted">6개 모두 체크 시 다음 단계 활성화</span>
-  <div style="display:flex;gap:8px;align-items:center">
-    <!-- 동일 스타일 버튼 추가 -->
-    <button type="button" class="btn" id="checkAllEdu" aria-label="숙지사항 모두 체크">모두 동의</button>
-    <button type="button" class="btn" id="toHealth" disabled>다음</button>
-  </div>
-</div>
-
+          <span class="muted">6개 모두 체크 시 다음 단계 활성화</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button type="button" class="btn" id="checkAllEdu" aria-label="숙지사항 모두 체크">모두 동의</button>
+            <button type="button" class="btn" id="toHealth" disabled>다음</button>
+          </div>
+        </div>
       </section>
 
       <!-- 4.5) 건강 문진표 -->
@@ -157,12 +153,18 @@
         <p class="muted">데모에서는 공사 출입자 플로우를 먼저 확인해주세요.</p>
       </section>
 
-      <!-- 7) QR 표시 -->
+      <!-- 7) QR 표시 (이미지로 대체) -->
       <section class="card hide" data-screen="qr" role="region" aria-labelledby="h-qr">
         <h2 id="h-qr" class="stage-title">QR 코드</h2>
-        <p class="muted">문자열 <strong>TEST1103</strong> 표시용 데모 QR입니다.</p>
+        <p class="muted">문자열 <strong>TEST1103</strong> 표시용 이미지 QR입니다.</p>
         <div class="qrbox">
-          <canvas id="qrCanvas" width="260" height="260" aria-label="실제 스캔 가능한 QR"></canvas>
+          <!-- GitHub raw 이미지: main → 실패 시 refs/heads/main 으로 재시도 -->
+          <img id="qrImg"
+               src="https://raw.githubusercontent.com/kih4602/Enter_System/main/Test1103.jpg"
+               alt="TEST1103 QR 이미지(스캔 가능)" width="260" height="260" decoding="async" loading="eager">
+        </div>
+        <div id="qrError" class="muted hide" style="margin-top:8px;color:#a00">
+          QR 이미지를 불러오지 못했습니다. 네트워크 상태 또는 이미지 경로를 확인해주세요.
         </div>
         <div
           style="margin-top:12px;padding:12px;border-left:4px solid var(--c-accent);
@@ -240,43 +242,27 @@
     // 3) 동의서
     const agreeInputs = document.querySelectorAll('[data-screen="agreements"] input[type="checkbox"]');
     const toEduBtn = document.getElementById('toEdu');
+    const checkAllAgree = document.getElementById('checkAllAgree');
     agreeInputs.forEach(chk=>{
       chk.addEventListener('change', ()=>{
         state.agree[chk.dataset.bind] = chk.checked;
         toEduBtn.disabled = !(state.agree.agree1 && state.agree.agree2 && state.agree.agree3);
       });
     });
+    checkAllAgree.addEventListener('click', ()=>{
+      agreeInputs.forEach(chk=>{
+        chk.checked = true;
+        state.agree[chk.dataset.bind] = true;
+        chk.dispatchEvent(new Event('change', { bubbles:true }));
+      });
+      toEduBtn.disabled = false;
+    });
     toEduBtn.addEventListener('click', ()=> show('education'));
 
-// [동의서] 모두 동의 버튼
-const checkAllAgree = document.getElementById('checkAllAgree');
-checkAllAgree.addEventListener('click', ()=>{
-  agreeInputs.forEach(chk=>{
-    chk.checked = true;
-    state.agree[chk.dataset.bind] = true;
-    chk.dispatchEvent(new Event('change', { bubbles:true }));
-  });
-  toEduBtn.disabled = false;
-});
-
-
-// 모두 동의 버튼 핸들러
-checkAllAgree.addEventListener('click', ()=>{
-  agreeInputs.forEach(chk => {
-    chk.checked = true;
-    // 상태 동기화
-    state.agree[chk.dataset.bind] = true;
-    // 화면의 다른 로직과 일관되게 change 이벤트도 발생시킴
-    chk.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  // 모두 체크되었으므로 다음 버튼 활성화 보장
-  toEduBtn.disabled = false;
-});
-
-    
     // 4) 숙지사항
     const eduChecks = document.querySelectorAll('[data-screen="education"] [data-edu]');
     const toHealthBtn = document.getElementById('toHealth');
+    const checkAllEdu = document.getElementById('checkAllEdu');
     function updateEduReady(){
       let ok=true; for(const k of [1,2,3,4,5,6]) ok = ok && !!state.edu[k];
       toHealthBtn.disabled = !ok;
@@ -287,19 +273,15 @@ checkAllAgree.addEventListener('click', ()=>{
         updateEduReady();
       });
     });
+    checkAllEdu.addEventListener('click', ()=>{
+      eduChecks.forEach(chk=>{
+        chk.checked = true;
+        state.edu[chk.dataset.edu] = true;
+        chk.dispatchEvent(new Event('change', { bubbles:true }));
+      });
+      updateEduReady();
+    });
     toHealthBtn.addEventListener('click', ()=> show('health'));
-
-    // [교육] 모두 동의 버튼
-const checkAllEdu = document.getElementById('checkAllEdu');
-checkAllEdu.addEventListener('click', ()=>{
-  eduChecks.forEach(chk=>{
-    chk.checked = true;
-    state.edu[chk.dataset.edu] = true;
-    chk.dispatchEvent(new Event('change', { bubbles:true }));
-  });
-  updateEduReady(); // toHealthBtn 활성화 반영
-});
-
 
     // 4.5) 건강 문진
     const healthChecks = document.querySelectorAll('[data-screen="health"] input[type="checkbox"][data-health]');
@@ -339,100 +321,19 @@ checkAllEdu.addEventListener('click', ()=>{
     const clearSig=document.getElementById('clearSig'); const toQRBtn=document.getElementById('toQR');
     function enableSign(){ toQRBtn.disabled = !hasStroke; }
     clearSig.addEventListener('click', ()=>{ const w=sig.clientWidth,h=180; ctx.clearRect(0,0,w,h); ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h); hasStroke=false; enableSign(); });
-    toQRBtn.addEventListener('click', ()=>{ if(hasStroke){ state.signed=true; show('qr'); drawDemoQR('TEST1103'); } });
+    toQRBtn.addEventListener('click', ()=>{ if(hasStroke){ state.signed=true; show('qr'); } });
 
-    // ===== qrcode.js (MIT, Kazuhiko Arase / davidshimjs) - 최소 캔버스 렌더 포함 =====
-    /*! qrcode.js v1.0.0 | MIT | (c) Kazuhiko Arase / davidshimjs */
-    (function(window){function QR8bitByte(d){this.mode=4;this.data=d}
-    QR8bitByte.prototype={getLength:function(){return this.data.length},write:function(b){for(var i=0;i<this.data.length;i++)b.put(this.data.charCodeAt(i),8)}};
-    var ECL={L:1,M:0,Q:3,H:2},EXP=new Array(256),LOG=new Array(256);for(var i=0;i<8;i++)EXP[i]=1<<i;for(i=8;i<256;i++)EXP[i]=EXP[i-4]^EXP[i-5]^EXP[i-6]^EXP[i-8];for(i=0;i<256;i++)LOG[EXP[i]]=i;
-    function gexp(n){for(;n<0;)n+=255;for(;n>=256;)n-=255;return EXP[n]}function glog(n){if(n<1)throw new Error("glog("+n+")");return LOG[n]}
-    function QRPolynomial(num,shift){var o=0;while(o<num.length&&num[o]==0)o++;this.num=new Array(num.length-o+shift);for(var i=0;i<num.length-o;i++)this.num[i]=num[i+o]}
-    QRPolynomial.prototype={get:function(i){return this.num[i]},getLength:function(){return this.num.length},multiply:function(e){var n=new Array(this.getLength()+e.getLength()-1);for(var i=0;i<this.getLength();i++)for(var j=0;j<e.getLength();j++)n[i+j]^=gexp(glog(this.get(i))+glog(e.get(j)));return new QRPolynomial(n,0)},mod:function(e){if(this.getLength()-e.getLength()<0)return this;var ratio=glog(this.get(0))-glog(e.get(0)),num=this.num.slice();for(var i=0;i<e.getLength();i++)num[i]^=gexp(glog(e.get(i))+ratio);return new QRPolynomial(num,0).mod(e)}};
-    var RS_TABLE=[[],[1,26,19],[1,44,34],[1,70,55],[1,100,80],[1,134,108],[2,86,68],[2,98,78],[2,121,97],[2,146,116],[2,86,68,2,87,69],[2,98,78,2,99,79],[2,121,97,2,122,98],[2,146,116,2,147,117],[2,86,68,4,87,69],[2,98,78,4,99,79],[2,121,97,4,122,98],[2,146,116,4,147,117],[2,86,68,4,87,69],[2,98,78,4,99,79],[4,121,97]];
-    function getRSBlocks(t){var r=RS_TABLE[t];var list=[];for(var i=0;i<r.length/3;i++){for(var c=0;c<r[3*i];c++)list.push({totalCount:r[3*i+1],dataCount:r[3*i+2]});}return list}
-    var Util={PATTERN_POS:function(){return[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62]]},
-      BCHD:function(d){var n=0;while(d!=0){n++;d>>=1}return n},
-      BCHTypeInfo:function(d){for(var v=d<<10;Util.BCHD(v)-Util.BCHD(1335)>=0;)v^=1335<<Util.BCHD(v)-Util.BCHD(1335);return (d<<10|v)^21522},
-      BCHTypeNumber:function(d){for(var v=d<<12;Util.BCHD(v)-Util.BCHD(7973)>=0;)v^=7973<<Util.BCHD(v)-Util.BCHD(7973);return d<<12|v},
-      getMask:function(p,i,j){switch(p){case 0:return(i+j)%2==0;case 1:return i%2==0;case 2:return j%3==0;case 3:return(i+j)%3==0;case 4:return(Math.floor(i/2)+Math.floor(j/3))%2==0;case 5:return i*j%2+i*j%3==0;case 6:return (i*j%2+i*j%3)%2==0;case 7:return (i*j%3+(i+j)%2)%2==0;default:throw'bad mask'}} ,
-      getLengthInBits:function(mode,type){if(type<10){return mode==4?8:8}else if(type<27){return mode==4?16:16}else{return mode==4?16:16}},
-      getErrorCorrectPolynomial:function(len){var a=new QRPolynomial([1],0);for(var i=0;i<len;i++)a=a.multiply(new QRPolynomial([1,gexp(i)],0));return a},
-      lostPoint:function(qr){var m=qr.getModuleCount(),lost=0;for(var r=0;r<m;r++)for(var c=0;c<m;c++){var same=0,d=qr.isDark(r,c);for(var dr=-1;dr<=1;dr++)if(!(r+dr<0||m<=r+dr))for(var dc=-1;dc<=1;dc++)if(!(c+dc<0||m<=c+dc))if(!(dr==0&&dc==0))d==qr.isDark(r+dr,c+dc)&&(same++);same>5&&(lost+=3+same-5)}return lost}};
-    function BitBuffer(){this.buffer=[];this.length=0}
-    BitBuffer.prototype={put:function(num,len){for(var i=0;i<len;i++)this.putBit(((num>>>(len-i-1))&1)==1)},getLengthInBits:function(){return this.length},putBit:function(bit){var i=Math.floor(this.length/8);this.buffer.length<=i&&this.buffer.push(0);bit&&(this.buffer[i]|=0x80>>(this.length%8));this.length++}};
-    function QRCodeModel(typeNumber,ecLevel){this.typeNumber=typeNumber;this.errorCorrectLevel=ecLevel;this.modules=null;this.moduleCount=0;this.dataList=[];this.dataCache=null}
-    QRCodeModel.prototype={addData:function(d){this.dataList.push(new QR8bitByte(d));this.dataCache=null},
-      isDark:function(r,c){if(this.modules[r][c]!=null)return this.modules[r][c];throw r+","+c},
-      getModuleCount:function(){return this.moduleCount},
-      make:function(){if(this.typeNumber<1){for(var t=1;t<40;t++){var rs=getRSBlocks(t,ECL.M),buf=new BitBuffer();for(var i=0;i<this.dataList.length;i++)buf.put(4,4),buf.put(this.dataList[i].getLength(),Util.getLengthInBits(4,t)),this.dataList[i].write(buf);for(buf.put(0,4);buf.getLengthInBits()%8!=0;)buf.put(0,1);for(;buf.getLengthInBits()<8*(function(rs){var s=0;for(var i=0;i<rs.length;i++)s+=rs[i].dataCount;return s})(rs);)buf.put(236,8),buf.put(17,8);this.typeNumber=t;break}}this.makeImpl(false,this.getBestMaskPattern())},
-      makeImpl:function(test,mask){this.moduleCount=4*this.typeNumber+17;this.modules=new Array(this.moduleCount);for(var r=0;r<this.moduleCount;r++){this.modules[r]=new Array(this.moduleCount);for(var c=0;c<this.moduleCount;c++)this.modules[r][c]=null}
-        this.setupPositionProbePattern(0,0);this.setupPositionProbePattern(this.moduleCount-7,0);this.setupPositionProbePattern(0,this.moduleCount-7);this.setupTimingPattern();this.setupTypeInfo(test,mask);this.typeNumber>=7&&this.setupTypeNumber(test);
-        if(this.dataCache==null){var rs=getRSBlocks(this.typeNumber,ECL.M),buf=new BitBuffer();for(var i=0;i<this.dataList.length;i++)buf.put(4,4),buf.put(this.dataList[i].getLength(),Util.getLengthInBits(4,this.typeNumber)),this.dataList[i].write(buf);for(buf.put(0,4);buf.getLengthInBits()%8!=0;)buf.put(0,1);for(;buf.getLengthInBits()<8*(function(rs){var s=0;for(var i=0;i<rs.length;i++)s+=rs[i].dataCount;return s})(rs);)buf.put(236,8),buf.put(17,8);this.dataCache=(function(qr,buffer,rs){var off=0,maxDC=0,maxEC=0,dc=[],ec=[];for(var r=0;r<rs.length;r++){var dcCount=rs[r].dataCount,ecCount=rs[r].totalCount-dcCount;maxDC=Math.max(maxDC,dcCount);maxEC=Math.max(maxEC,ecCount);dc[r]=new Array(dcCount);for(var i=0;i<dcCount;i++)dc[r][i]=buffer.buffer[i+off];off+=dcCount;var rsPoly=new QRPolynomial([1],0);for(i=0;i<ecCount;i++)rsPoly=rsPoly.multiply(new QRPolynomial([1,gexp(i)],0));var raw=new QRPolynomial(dc[r],0);var mod=raw.mod(rsPoly);ec[r]=new Array(rsPoly.getLength());for(i=0;i<ec[r].length;i++)ec[r][i]=mod.get(i)}var total=0;for(i=0;i<rs.length;i++)total+=rs[i].totalCount;var data=new Array(total),idx=0;for(i=0;i<maxDC;i++)for(r=0;r<rs.length;r++)i<dc[r].length&&(data[idx++]=dc[r][i]);for(i=0;i<maxEC;i++)for(r=0;r<rs.length;r++)i<ec[r].length&&(data[idx++]=ec[r][i]);return data})(0,buf,rs)}
-        this.mapData(this.dataCache,mask)},
-      setupPositionProbePattern:function(r,c){for(var i=-1;i<=7;i++)if(!(r+i<=-1||this.moduleCount<=r+i))for(var j=-1;j<=7;j++)if(!(c+j<=-1||this.moduleCount<=c+j))this.modules[r+i][c+j]=i>=0&&i<=6&&(j==0||j==6)||j>=0&&j<=6&&(i==0||i==6)||i>=2&&i<=4&&j>=2&&j<=4},
-      setupTimingPattern:function(){for(var r=8;r<this.moduleCount-8;r++){this.modules[r][6]==null&&(this.modules[r][6]=r%2==0);this.modules[6][r]==null&&(this.modules[6][r]=r%2==0)}},
-      setupTypeNumber:function(test){var bits=Util.BCHTypeNumber(this.typeNumber);for(var i=0;i<18;i++){var mod=!test&&((bits>>i)&1)==1;this.modules[Math.floor(i/3)][i%3+this.moduleCount-11]=mod;this.modules[i%3+this.moduleCount-11][Math.floor(i/3)]=mod}},
-      setupTypeInfo:function(test,mask){var data=ECL.M<<3|mask,bits=Util.BCHTypeInfo(data);for(var i=0;i<15;i++){var mod=!test&&((bits>>i)&1)==1;i<6?this.modules[i][8]=mod:i<8?this.modules[i+1][8]=mod:this.modules[this.moduleCount-15+i][8]=mod}
-        for(i=0;i<15;i++){mod=!test&&((bits>>i)&1)==1;i<8?this.modules[8][this.moduleCount-i-1]=mod:i<9?this.modules[8][15-i]=mod:this.modules[8][15-i-1]=mod}
-        this.modules[this.moduleCount-8][8]=!test},
-      mapData:function(data,mask){var inc=-1,row=this.moduleCount-1,bit=7,byte=0;for(var col=this.moduleCount-1;col>0;col-=2){col==6&&col--;for(;;){for(var c=0;c<2;c++)this.modules[row][col-c]==null&&(this.modules[row][col-c]=byte<data.length?((data[byte]>>>bit)&1)==1:false,bit--,bit==-1&&(byte++,bit=7));row+=inc;if(row<0||this.moduleCount<=row){row-=inc;inc=-inc;break}}}},
-      getBestMaskPattern:function(){var min=0,pat=0;for(var i=0;i<8;i++){this.makeImpl(true,i);var lost=(function(q){return Util.lostPoint(q)})(this);(i==0||lost<min)&&(min=lost,pat=i)}return pat},
-      makeImage:function(size){var cnt=this.moduleCount,cs=size/cnt,canvas=document.createElement('canvas');canvas.width=canvas.height=size;var g=canvas.getContext('2d');g.fillStyle="#fff";g.fillRect(0,0,size,size);g.fillStyle="#000";for(var r=0;r<cnt;r++)for(var c=0;c<cnt;c++)this.isDark(r,c)&&g.fillRect(Math.round(c*cs),Math.round(r*cs),Math.ceil(cs),Math.ceil(cs));return canvas}};
-    function QRCode(el,opt){this._el=el;this._opt=opt||{}}
-    QRCode.prototype.makeCode=function(text){var qr=new QRCodeModel(0,ECL.M);qr.addData(text);qr.make();this._el.innerHTML="";var img=qr.makeImage(this._opt.width||200);img.setAttribute('alt',text);this._el.appendChild(img)};
-    window.QRCode=QRCode;})(window);
-
-    // ===== 실제 QR을 캔버스에 렌더 =====
- function drawDemoQR(text){
-  const c = document.getElementById('qrCanvas');
-  if(!c){ console.warn('qrCanvas not found'); return; }
-  const size = Math.min(c.width || 220, c.height || 220);
-
-  // 오프스크린에 실제 QR 생성
-  const holder = document.createElement('div');
-  const q = new QRCode(holder, { width: size, height: size }); // qrcode.js 사용
-  q.makeCode(text);
-
-  const g = c.getContext('2d');
-  g.imageSmoothingEnabled = false;
-
-  // 전체 바탕 흰색
-  g.fillStyle = '#fff';
-  g.fillRect(0, 0, size, size);
-
-  // 90% 크기로 축소 렌더(Quiet Zone 확보 → 인식률 향상)
-  const scale = 0.90;                 // ← 요구사항: 90%
-  const inner = Math.round(size * scale);
-  const pad = Math.floor((size - inner) / 2);
-
-  const drawSrc = (imgOrCanvas)=>{
-    g.drawImage(imgOrCanvas, pad, pad, inner, inner);
-  };
-
-  // qrcode.js 산출물 추출(<canvas> 또는 <img>)
-  const srcCanvas = holder.querySelector('canvas');
-  const srcImg = holder.querySelector('img');
-
-  if (srcCanvas) {
-    drawSrc(srcCanvas);
-  } else if (srcImg) {
-    if (srcImg.complete) drawSrc(srcImg);
-    else {
-      srcImg.onload = () => drawSrc(srcImg);
-      srcImg.onerror = () => alert('QR 이미지를 불러오지 못했습니다.');
-    }
-  } else {
-    alert('QR 생성에 실패했습니다.');
-  }
-
-  // ⚠ 하단 라벨(사각형/텍스트)은 제거된 상태(가림 현상 방지)
-}
-
-
-    // 초기 렌더: TEST1103
-    document.addEventListener('DOMContentLoaded', () => {
-      drawDemoQR('TEST1103');
+    // ===== QR 이미지 로드 실패 시 대체 경로 재시도 =====
+    const qrImg = document.getElementById('qrImg');
+    const qrError = document.getElementById('qrError');
+    qrImg.addEventListener('error', ()=>{
+      if(!qrImg.dataset.altTried){
+        qrImg.dataset.altTried='1';
+        // 대체 raw 경로 재시도
+        qrImg.src = 'https://raw.githubusercontent.com/kih4602/Enter_System/refs/heads/main/Test1103.jpg';
+      }else{
+        qrError.classList.remove('hide');
+      }
     });
   </script>
 </body>
