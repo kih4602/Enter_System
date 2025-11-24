@@ -81,9 +81,9 @@
 <!-- [기존] agreements 섹션 푸터 내부 div 교체 -->
 <div class="footer">
   <div class="muted">모두 체크 시 다음 단계로 이동 가능</div>
-  <!-- ▼ 이 부분을 다음으로 교체 -->
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-    <button type="button" class="btn-outline" id="checkAllAgree" aria-label="동의 항목 모두 선택">모두 동의</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px">
+    <!-- 같은 크기/같은 색상: .btn 사용 -->
+    <button type="button" class="btn" id="checkAllAgree" aria-label="동의 항목 모두 선택">모두 동의</button>
     <button type="button" class="btn" id="toEdu" disabled>다음</button>
   </div>
 </div>
@@ -102,9 +102,14 @@
           <label class="checkline"><input type="checkbox" data-edu="6"> ⑥ 비상대응 절차 숙지(대피로/집결지 등)</label>
         </div>
         <div class="footer" style="display:flex;justify-content:space-between;align-items:center">
-          <span class="muted">6개 모두 체크 시 다음 단계 활성화</span>
-          <button type="button" class="btn" id="toHealth" disabled>다음</button>
-        </div>
+  <span class="muted">6개 모두 체크 시 다음 단계 활성화</span>
+  <div style="display:flex;gap:8px;align-items:center">
+    <!-- 동일 스타일 버튼 추가 -->
+    <button type="button" class="btn" id="checkAllEdu" aria-label="숙지사항 모두 체크">모두 동의</button>
+    <button type="button" class="btn" id="toHealth" disabled>다음</button>
+  </div>
+</div>
+
       </section>
 
       <!-- 4.5) 건강 문진표 -->
@@ -243,8 +248,17 @@
     });
     toEduBtn.addEventListener('click', ()=> show('education'));
 
-// [동의서] 기존 변수 아래에 추가
+// [동의서] 모두 동의 버튼
 const checkAllAgree = document.getElementById('checkAllAgree');
+checkAllAgree.addEventListener('click', ()=>{
+  agreeInputs.forEach(chk=>{
+    chk.checked = true;
+    state.agree[chk.dataset.bind] = true;
+    chk.dispatchEvent(new Event('change', { bubbles:true }));
+  });
+  toEduBtn.disabled = false;
+});
+
 
 // 모두 동의 버튼 핸들러
 checkAllAgree.addEventListener('click', ()=>{
@@ -274,6 +288,18 @@ checkAllAgree.addEventListener('click', ()=>{
       });
     });
     toHealthBtn.addEventListener('click', ()=> show('health'));
+
+    // [교육] 모두 동의 버튼
+const checkAllEdu = document.getElementById('checkAllEdu');
+checkAllEdu.addEventListener('click', ()=>{
+  eduChecks.forEach(chk=>{
+    chk.checked = true;
+    state.edu[chk.dataset.edu] = true;
+    chk.dispatchEvent(new Event('change', { bubbles:true }));
+  });
+  updateEduReady(); // toHealthBtn 활성화 반영
+});
+
 
     // 4.5) 건강 문진
     const healthChecks = document.querySelectorAll('[data-screen="health"] input[type="checkbox"][data-health]');
@@ -358,38 +384,51 @@ checkAllAgree.addEventListener('click', ()=>{
     window.QRCode=QRCode;})(window);
 
     // ===== 실제 QR을 캔버스에 렌더 =====
-    function drawDemoQR(text){
-      const c = document.getElementById('qrCanvas');
-      if(!c){ console.warn('qrCanvas not found'); return; }
-      const size = Math.min(c.width || 220, c.height || 220);
+ function drawDemoQR(text){
+  const c = document.getElementById('qrCanvas');
+  if(!c){ console.warn('qrCanvas not found'); return; }
+  const size = Math.min(c.width || 220, c.height || 220);
 
-      // 오프스크린에 실제 QR 생성
-      const holder = document.createElement('div');
-      const q = new QRCode(holder, { width: size, height: size }); // qrcode.js 사용
-      q.makeCode(text);
+  // 오프스크린에 실제 QR 생성
+  const holder = document.createElement('div');
+  const q = new QRCode(holder, { width: size, height: size }); // qrcode.js 사용
+  q.makeCode(text);
 
-      const g = c.getContext('2d');
-      g.imageSmoothingEnabled = false;
-      g.fillStyle = '#fff';
-      g.fillRect(0, 0, size, size);
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
 
-      // qrcode.js가 만든 소스 추출
-      const srcCanvas = holder.querySelector('canvas');
-      const srcImg = holder.querySelector('img');
+  // 전체 바탕 흰색
+  g.fillStyle = '#fff';
+  g.fillRect(0, 0, size, size);
 
-      if (srcCanvas) {
-        g.drawImage(srcCanvas, 0, 0, size, size);
-      } else if (srcImg) {
-        if (srcImg.complete) g.drawImage(srcImg, 0, 0, size, size);
-        else {
-          srcImg.onload = () => g.drawImage(srcImg, 0, 0, size, size);
-          srcImg.onerror = () => alert('QR 이미지를 불러오지 못했습니다.');
-        }
-      } else {
-        alert('QR 생성에 실패했습니다.');
-      }
+  // 90% 크기로 축소 렌더(Quiet Zone 확보 → 인식률 향상)
+  const scale = 0.90;                 // ← 요구사항: 90%
+  const inner = Math.round(size * scale);
+  const pad = Math.floor((size - inner) / 2);
 
+  const drawSrc = (imgOrCanvas)=>{
+    g.drawImage(imgOrCanvas, pad, pad, inner, inner);
+  };
+
+  // qrcode.js 산출물 추출(<canvas> 또는 <img>)
+  const srcCanvas = holder.querySelector('canvas');
+  const srcImg = holder.querySelector('img');
+
+  if (srcCanvas) {
+    drawSrc(srcCanvas);
+  } else if (srcImg) {
+    if (srcImg.complete) drawSrc(srcImg);
+    else {
+      srcImg.onload = () => drawSrc(srcImg);
+      srcImg.onerror = () => alert('QR 이미지를 불러오지 못했습니다.');
     }
+  } else {
+    alert('QR 생성에 실패했습니다.');
+  }
+
+  // ⚠ 하단 라벨(사각형/텍스트)은 제거된 상태(가림 현상 방지)
+}
+
 
     // 초기 렌더: TEST1103
     document.addEventListener('DOMContentLoaded', () => {
